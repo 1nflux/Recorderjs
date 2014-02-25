@@ -1,3 +1,5 @@
+importScripts("libmp3lame.js");
+
 var recLength = 0,
   recBuffersL = [],
   recBuffersR = [],
@@ -10,6 +12,9 @@ this.onmessage = function(e){
       break;
     case 'record':
       record(e.data.buffer);
+      break;
+    case 'exportMP3':
+      exportMP3(e.data.type);
       break;
     case 'exportWAV':
       exportWAV(e.data.type);
@@ -31,6 +36,25 @@ function record(inputBuffer){
   recBuffersL.push(inputBuffer[0]);
   recBuffersR.push(inputBuffer[1]);
   recLength += inputBuffer[0].length;
+}
+
+function exportMP3(type){
+    var bufferL = mergeBuffers(recBuffersL, recLength);
+    var bufferR = mergeBuffers(recBuffersR, recLength);
+
+    console.log("Start MP3 encoding");
+    var mp3codec = Lame.init();
+    Lame.set_mode(mp3codec, Lame.JOINT_STEREO);
+    Lame.set_num_channels(mp3codec, 2);
+    Lame.set_out_samplerate(mp3codec, sampleRate);
+    Lame.set_bitrate(mp3codec, 128);
+    Lame.init_params(mp3codec);
+
+    var mp3data = Lame.encode_buffer_ieee_float(mp3codec, bufferL, bufferR);
+    audioBlob = new Blob([mp3data.data], { type: "audio/mp3" });
+    console.log("Done MP3 encoding");
+
+    this.postMessage(audioBlob);
 }
 
 function exportWAV(type){
